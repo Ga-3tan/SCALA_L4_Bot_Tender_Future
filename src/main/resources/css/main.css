@@ -1,0 +1,73 @@
+body {
+    margin: auto;
+    max-width: 40em;
+    padding: 7px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+body > nav {
+    margin-top: 1em;
+    display: flex;
+    line-height: 2rem;
+}
+.content {
+    padding: 0px 5px;
+}
+.nav-brand {
+    font-size: 1.8rem;
+    flex-grow: 1;
+}
+.nav-item {
+    flex-grow: 0;
+}
+.nav-brand, .nav-item {
+    padding: 0px 5px;
+}
+form {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    grid-template-rows: auto;
+    column-gap: 2px;
+    grid-template-areas:
+        ". error ."
+        "label input submit";
+}
+form > label {
+    grid-area: label;
+    padding: 2px 0;
+}
+form > input[type="submit"] {
+    grid-area: submit;
+}
+form > input[type="text"] {
+    grid-area: input;
+}
+.errorMsg {
+    grid-area: error;
+    padding: 5px 0;
+    color: crimson;
+    font-size: 0.8em;
+}
+#boardMessage {
+    margin: 1em 0 0.2em 0;
+    padding: 0.5em;
+    border: solid #aaa 1px;
+    border-radius: 3px;
+}
+.msg {
+    margin: 0.1em 0;
+}
+.mention {
+    color: rgb(5, 42, 105);
+}
+.author {
+    grid-area: author;
+    text-align: right;
+    font-weight: bold;
+    margin-right: 0.3em;
+}
+.author::after {
+    content: " :";
+}
+.msg-content {
+    grid-area: msg;
+}
