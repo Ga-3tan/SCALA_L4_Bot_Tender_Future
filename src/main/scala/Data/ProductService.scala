@@ -2,6 +2,8 @@ package Data
 
 import Utils.Dictionary
 
+import scala.concurrent.duration.{Duration, SECONDS}
+
 trait ProductService:
   type BrandName = String
   type ProductName = String
@@ -21,7 +23,10 @@ trait ProductService:
     */
   def getDefaultBrand(product: ProductName): BrandName
 
-
+  def getMeanPrepTime(productName: ProductName): Duration = productName match
+    case "bière" => Duration(3, SECONDS)
+    case "croissant" => Duration(5, SECONDS)
+    case _ => Duration(0, SECONDS)
 
 class ProductImpl extends ProductService:
 

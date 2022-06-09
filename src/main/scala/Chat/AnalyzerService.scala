@@ -1,9 +1,15 @@
 package Chat
 
-import Data.{AccountService, ProductService, Session}
+import Data.{AccountService, MessageService, ProductService, Session}
+import Utils.FutureOps
+
+import scala.concurrent.*
+import scala.util.{Failure, Success, Try}
+import concurrent.ExecutionContext.Implicits.global
 
 class AnalyzerService(productSvc: ProductService,
-                      accountSvc: AccountService):
+                      accountSvc: AccountService,
+                      botService: BotService):
 
   import ExprTree._
 
@@ -57,8 +63,10 @@ class AnalyzerService(productSvc: ProductService,
           val price = computePrice(t)
           var balance = accountSvc.getAccountBalance(user)
           if balance >= price then
+            botService.f(futureReply(t))
             balance = accountSvc.purchase(user, price)
-            s"Voici donc ${inner(t)} ! Cela coûte CHF $price et votre nouveau solde est de CHF $balance."
+            s"Votre commande est en cours de préparation: ${inner(t)}"
+//            s"Voici donc ${inner(t)} ! Cela coûte CHF $price et votre nouveau solde est de CHF $balance."
           else
             s"Vous n'avez pas assez d'argent dans votre solde. Cela coûte CHF $price. et votre solde est CHF $balance."
         }).getOrElse(msgIdentificationNeeded)
@@ -75,4 +83,40 @@ class AnalyzerService(productSvc: ProductService,
       case Order(quantity, product, brand) =>
         s"$quantity ${if brand == null then productSvc.getDefaultBrand(product) else brand}"
 
+  def futureReply(session: Session)(t: ExprTree): List[Future[ExprTree]] =
+    val inner: ExprTree => List[Future[ExprTree]] = futureReply(session)
+
+    t match
+      case And(tLeft, tRight) => inner(tLeft) ::: inner(tRight)
+      case Or(tLeft, tRight) =>
+        if computePrice(tLeft) < computePrice(tRight)
+        then inner(tLeft)
+        else inner(tRight)
+      case Order(quantity, product, brand) =>
+        List(FutureOps.randomSchedule(productSvc.getMeanPrepTime(product)).transform {
+          case Success(_) => Try(Order(quantity, product, brand))
+          case Failure(exception) => throw Exception(exception)
+        })
+//        s"$quantity ${if brand == null then productSvc.getDefaultBrand(product) else brand}"
+
+
+
+  // analyzer service create futures and pass BotService's callbacks,
+  // these callbacks will write response to the chat when the futures
+  // are completed
+
+  def f(futures: List[Future[Order]]): Unit =
+
+    val orders: List[Order] = List()
+
+    futures.map(future => future.map { value =>
+      value :: orders
+    })
+
+    // TOOD HANDLE EMPTY ORDERS
+    val response = s"${orders.head.quantity} ${if orders.head.brand == null then productSvc.getDefaultBrand(orders.head.product) else orders.head.brand}"
+
+    response = response.foldLeft(response)((order, tail) => {
+      s"$order et $tail"
+    })
 end AnalyzerService
