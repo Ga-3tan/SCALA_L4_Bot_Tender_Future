@@ -12,7 +12,7 @@ object MainParser:
     val productSvc: ProductService = new ProductImpl()
     val sessionSvc: SessionService = new SessionImpl()
     val accountSvc: AccountService = new AccountImpl()
-    val analyzerSvc: AnalyzerService = new AnalyzerService(productSvc, accountSvc)
+    val analyzerSvc: AnalyzerService = new AnalyzerService(productSvc, null, accountSvc)
 
     println("Bienvenue au Chill-Out !")
 

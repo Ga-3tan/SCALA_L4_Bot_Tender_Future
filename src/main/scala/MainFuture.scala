@@ -10,8 +10,8 @@ object MainFuture extends cask.Main:
   val sessionSvc = new SessionImpl()
   val productSvc = new ProductImpl()
   val accountSvc: AccountService = new AccountImpl()
-  val analyzerSvc = new AnalyzerService(productSvc, accountSvc)
   val msgSvc: MessageService = new MessageConcurrentImpl(new MessageImpl())
+  val analyzerSvc = new AnalyzerService(productSvc, msgSvc, accountSvc)
 
   val allRoutes = Seq(
       StaticRoutes(),

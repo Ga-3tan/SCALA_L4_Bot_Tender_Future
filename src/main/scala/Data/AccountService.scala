@@ -37,7 +37,8 @@ trait   AccountService:
   def purchase(user: String, amount: Double): Double
 
 class AccountImpl extends AccountService:
-  // Part 2 Step 2
+  // TODO add concurrent access with a TrieMap and using updateWith when purchasing
+  
   var accounts: mutable.Map[String, Double] = mutable.Map().withDefaultValue(30.0)
 
   def getAccountBalance(user: String): Double = accounts(user)

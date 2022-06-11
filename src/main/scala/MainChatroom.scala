@@ -10,7 +10,7 @@ object MainChatroom extends cask.Main:
   val sessionSvc: SessionService = new SessionImpl()
   val accountSvc: AccountService = new AccountImpl()
   val msgSvc: MessageService = new MessageImpl()
-  val analyzerSvc: AnalyzerService = new AnalyzerService(productSvc, accountSvc)
+  val analyzerSvc: AnalyzerService = new AnalyzerService(productSvc, msgSvc, accountSvc)
 
   val allRoutes = Seq(
       StaticRoutes(),
