@@ -2,7 +2,7 @@ import Chat.*
 import Data.*
 import Utils.*
 import Web.{StaticRoutes, UsersRoutes}
-import Web.{MessagesRoutes}
+import Web.MessagesRoutes
 
 object MainFuture extends cask.Main:
   val spellCheckerSvc = new SpellCheckerImpl(Dictionary.dictionary)
@@ -11,7 +11,7 @@ object MainFuture extends cask.Main:
   val productSvc = new ProductImpl()
   val accountSvc: AccountService = new AccountImpl()
   val msgSvc: MessageService = new MessageConcurrentImpl(new MessageImpl())
-  val analyzerSvc = new AnalyzerService(productSvc, msgSvc, accountSvc)
+  val analyzerSvc = new AnalyzerFutureService(productSvc, msgSvc, accountSvc)
 
   val allRoutes = Seq(
       StaticRoutes(),

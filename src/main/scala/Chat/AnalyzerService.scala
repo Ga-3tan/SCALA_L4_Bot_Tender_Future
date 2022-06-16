@@ -2,7 +2,6 @@ package Chat
 
 import Data.{AccountService, MessageService, ProductService, Session}
 
-import scala.collection.concurrent.TrieMap
 import scala.concurrent.*
 import scala.concurrent.duration.Duration
 import Utils.FutureOps
@@ -13,10 +12,15 @@ import scala.util.{Failure, Success, Try}
 import concurrent.ExecutionContext.Implicits.global
 
 class AnalyzerService(productSvc: ProductService,
-                      msgSvc: MessageService,
                       accountSvc: AccountService):
 
   import ExprTree._
+
+  def msgIdentificationNeeded: String = "Veuillez d'abord vous identifier."
+  def msgYourSold(balance: Double): String = s"votre solde est CHF $balance"
+  def msgGivePrice(price: Double): String = s"Cela coûte CHF ${price}"
+  def msgGiveOrder(orders: String): String = s"Voici donc $orders"
+  def msgNotEnoughInBalance(price: Double, balance: Double): String = s"Vous n'avez pas assez d'argent dans votre solde. ${msgGivePrice(price)} et ${msgYourSold(balance)}."
 
   /**
     * Compute the price of the current node, then returns it. If the node is not a computational node, the method
@@ -33,16 +37,13 @@ class AnalyzerService(productSvc: ProductService,
       case Order(quantity, product, brand) => productSvc.getPrice(product, brand) * quantity
       case _ => 0.0
 
-  def getOrders(t: ExprTree): List[Order] =
-    t match
-      case RequestOrder(t) => getOrders(t)
-      case And(tLeft, tRight) => getOrders(tLeft) ::: getOrders(tRight)
-      case Or(tLeft, tRight) =>
-        if computePrice(tLeft) <= computePrice(tRight)
-        then getOrders(tLeft)
-        else getOrders(tRight)
-      case Order(quantity, product, brand) => List(Order(quantity, product, brand))
-      case _ => throw new Error("Incorrect Type ExprTree in RequestOrder")
+  def processOrders(user: String, t: ExprTree): String =
+    val price = computePrice(t)
+    var balance = accountSvc.getAccountBalance(user)
+    if balance >= price then
+      balance = accountSvc.purchase(user, price)
+      s"${msgGiveOrder(reply(null)(t))} ! ${msgGivePrice(price)} et votre nouveau solde est de CHF $balance."
+    else msgNotEnoughInBalance(price, balance)
 
   /**
     * Return the output text of the current node, in order to write it in console.
@@ -52,7 +53,6 @@ class AnalyzerService(productSvc: ProductService,
   def reply(session: Session)(t: ExprTree): String =
     // you can use this to avoid having to pass the session when doing recursion
     val inner: ExprTree => String = reply(session)
-    val msgIdentificationNeeded: String = "Veuillez d'abord vous identifier."
 
     t match
       /* User stat */
@@ -74,57 +74,9 @@ class AnalyzerService(productSvc: ProductService,
           .getOrElse(msgIdentificationNeeded)
       case RequestOrder(t) =>
         session.getCurrentUser.map(user => {
-          val price = computePrice(t)
-          var balance = accountSvc.getAccountBalance(user)
-          if balance >= price then
-
-            // TODO refresh page when command finished
-
-            val orders = getOrders(t).map(o =>
-              FutureOps.randomSchedule(productSvc.getMeanPrepTime(o.product),successRate = 0.5)
-                .map(_ => Success(o)).recover { case x => Failure(x)}
-            )
-
-            //val validOrders = Future.sequence(orders).map(_.filter(_.isSuccess))
-            val validOrders = Future.sequence(orders).map(_.collect{ case Success(v) => v})
-            validOrders onComplete {
-              case Success(l) =>
-                if l.isEmpty then
-                  msgSvc.add(
-                    sender = "Bot-tender",
-                    msg = Layouts.getMessageSpan(s"@$user la commande de ${inner(t)} ne peut pas être délivré.")
-                  )
-                else if l.length == orders.length then
-                  balance = accountSvc.purchase(user, price)
-                  msgSvc.add(
-                    sender = "Bot-tender",
-                    msg = Layouts.getMessageSpan(s"@$user La commande de ${inner(t)} est prête. Cela coûte CHF $price")
-                  )
-                  accountSvc.purchase(user, price)
-                else
-                  val replyValidOrders = l.map(inner).foldLeft("")(_ + " et " + _)
-                  val totPrice = l.map(computePrice).foldLeft(0.0)(_ + _)
-                  msgSvc.add(
-                    sender = "Bot-tender",
-                    msg = Layouts.getMessageSpan(s"@$user la commande de ${inner(t)} est partiellement prête. Voici $replyValidOrders. Cela coûte $totPrice.-")
-                  )
-                  balance = accountSvc.purchase(user, totPrice)
-                val replyValidOrders = l.foldLeft("")
-              case Failure(fail) =>
-                msgSvc.add(
-                  sender = "Bot-tender",
-                  msg = Layouts.getMessageSpan(s"@$user la commande de ${inner(t)} ne peut pas être délivré.")
-                )
-
-            }
-
-            s"Votre commande est en cours de préparation: ${inner(t)}"
-            //balance = accountSvc.purchase(user, price)
-            //s"Voici donc ${inner(t)} ! Cela coûte CHF $price et votre nouveau solde est de CHF $balance."
-          else
-            s"Vous n'avez pas assez d'argent dans votre solde. Cela coûte CHF $price. et votre solde est CHF $balance."
+          processOrders(user,t)
         }).getOrElse(msgIdentificationNeeded)
-      case RequestPrice(t) => s"Cela nous coûte CHF ${computePrice(t)} au total"
+      case RequestPrice(t) => msgGivePrice(computePrice(t))
 
       /* Logical operator */
       case And(tLeft, tRight) => s"${inner(tLeft)} et ${inner(tRight)}"

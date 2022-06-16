@@ -9,7 +9,6 @@ sealed trait ExprTree
   * Declarations of the nodes' types.
   */
 object ExprTree:
-  // Part 2 Step 3
   case class Thirsty() extends ExprTree
   case class Hungry() extends ExprTree
   case class Identify(user: String) extends ExprTree // Rename Identification
