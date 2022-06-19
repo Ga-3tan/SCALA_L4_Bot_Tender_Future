@@ -1,1 +1,3 @@
 # SCALA_L3_Bot_Tender_Chatroom
+## Structure added
+Nous avons créé un WebsocketService pour gérer la connexion ainsi que le rafraichissement pour chaque utilisateur afin d'avoir un moyen de modifier le chat indépendamment de l'interaction des utilisateurs. La raison est qu'après chaque commande, du temps va passer avant que la requête puisse être complété. Le bot devra ensuite répondre à la commande fini et cela requiert de mettre à jour le chat pour tout les utilisateurs. Les commandes sont traités par l'AnalyzerFutureService qui implémente l'AnalyzerService et qui gère la création des futures qui donneront la réponse à l'utilisateur quand la commande est prête.
