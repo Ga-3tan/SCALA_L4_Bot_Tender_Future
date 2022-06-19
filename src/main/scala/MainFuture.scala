@@ -1,8 +1,7 @@
 import Chat.*
 import Data.*
 import Utils.*
-import Web.{StaticRoutes, UsersRoutes}
-import Web.MessagesRoutes
+import Web.{MessagesRoutes, StaticRoutes, UsersRoutes, WebsocketImpl}
 
 object MainFuture extends cask.Main:
   val spellCheckerSvc = new SpellCheckerImpl(Dictionary.dictionary)
@@ -11,12 +10,13 @@ object MainFuture extends cask.Main:
   val productSvc = new ProductImpl()
   val accountSvc: AccountService = new AccountImpl()
   val msgSvc: MessageService = new MessageConcurrentImpl(new MessageImpl())
-  val analyzerSvc = new AnalyzerFutureService(productSvc, msgSvc, accountSvc)
+  val websocketSvc = new WebsocketImpl()
+  val analyzerSvc = new AnalyzerFutureService(productSvc, msgSvc, accountSvc, websocketSvc)
 
   val allRoutes = Seq(
       StaticRoutes(),
       UsersRoutes(accountSvc, sessionSvc),
-      MessagesRoutes(tokenizerSvc, analyzerSvc, msgSvc, accountSvc, sessionSvc),
+      MessagesRoutes(tokenizerSvc, analyzerSvc, msgSvc, accountSvc, sessionSvc, websocketSvc),
   )
 
   override def port: Int = 8980

@@ -1,8 +1,9 @@
 package Data
 
+import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 
-trait   AccountService:
+trait AccountService:
   /**
     * Retrieve the balance of a given account
     *
@@ -36,10 +37,9 @@ trait   AccountService:
     */
   def purchase(user: String, amount: Double): Double
 
-class AccountImpl extends AccountService:
-  // TODO add concurrent access with a TrieMap and using updateWith when purchasing
-  
-  var accounts: mutable.Map[String, Double] = mutable.Map().withDefaultValue(30.0)
+class AccountImpl extends AccountService :
+
+  var accounts: mutable.Map[String, Double] = TrieMap().withDefaultValue(30.0)
 
   def getAccountBalance(user: String): Double = accounts(user)
 
@@ -48,8 +48,9 @@ class AccountImpl extends AccountService:
   def isAccountExisting(user: String): Boolean = accounts.contains(user)
 
   def purchase(user: String, amount: Double): Double =
-    assert(isAccountExisting(user))
-    accounts(user) -= amount
-    accounts(user)
+    accounts.updateWith(user) {
+      case Some(v) => Some(v - amount)
+      case None => throw Exception()
+    }.get
 
 end AccountImpl

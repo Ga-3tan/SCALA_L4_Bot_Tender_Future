@@ -18,14 +18,10 @@ class MessagesRoutes(tokenizerSvc: TokenizerService,
                      analyzerSvc: AnalyzerService,
                      msgSvc: MessageService,
                      accountSvc: AccountService,
-                     sessionSvc: SessionService)(implicit val log: cask.Logger) extends cask.Routes :
+                     sessionSvc: SessionService,
+                     websocketSvc: WebsocketService)(implicit val log: cask.Logger) extends cask.Routes :
 
     import Decorators.getSession
-
-    /**
-      * List of connected websockets
-      */
-    val websockets: mutable.ListBuffer[cask.WsChannelActor] = mutable.ListBuffer()
 
     /**
       * Display HomePage when a GET is made to `/`
@@ -111,11 +107,7 @@ class MessagesRoutes(tokenizerSvc: TokenizerService,
       * Send the last 20 messages to all connected websockets
       */
     def send20LastMessageToAll(): Unit =
-        websockets.foreach(
-            ws => ws.send(cask.Ws.Text(
-                Layouts.getBoardMessageContent(msgSvc.getLatestMessages(20)).foldLeft("")(_ + _))
-            )
-        )
+      websocketSvc.sendMessagesToAll(msgSvc.getLatestMessages(20))
 
     /**
       * Process and store the new websocket connection made to `/subscribe`
@@ -125,9 +117,9 @@ class MessagesRoutes(tokenizerSvc: TokenizerService,
     @cask.websocket("/subscribe")
     def subscribe(): cask.WebsocketResult =
         cask.WsHandler { channel =>
-            websockets.addOne(channel)
+            websocketSvc.add(channel)
             cask.WsActor {
-                case cask.Ws.Close(_, _) => websockets -= channel // handle close, when closed : remove websocket
+                case cask.Ws.Close(_, _) => websocketSvc.remove(channel) // handle close, when closed : remove websocket
             }
         }
 

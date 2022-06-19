@@ -4,7 +4,7 @@ import Data.{AccountService, MessageService, ProductService, Session}
 import Chat.AnalyzerService
 import Chat.ExprTree.{And, Or, Order, RequestOrder}
 import Utils.FutureOps
-import Web.Layouts
+import Web.{Layouts, WebsocketService}
 
 import scala.util.{Failure, Success, Try}
 import concurrent.ExecutionContext.Implicits.global
@@ -12,7 +12,8 @@ import scala.concurrent.Future
 
 class AnalyzerFutureService(productSvc: ProductService,
                             msgSvc: MessageService,
-                            accountSvc: AccountService) extends AnalyzerService(productSvc,accountSvc) :
+                            accountSvc: AccountService,
+                            websocketSvc: WebsocketService) extends AnalyzerService(productSvc,accountSvc) :
 
   def getOrders(t: ExprTree): List[Order] =
     t match
@@ -62,13 +63,17 @@ class AnalyzerFutureService(productSvc: ProductService,
           sender = "Bot-tender",
           msg = Layouts.getMessageSpan(s"$msgContent")
         )
-        // TODO refresh page when command finished
-      case Failure(fail) =>
+        
+        // refresh page
+        websocketSvc.sendMessagesToAll(msgSvc.getLatestMessages(20))
+      case Failure(_) =>
         msgSvc.add(
           sender = "Bot-tender",
-          msg = Layouts.getMessageSpan(s"$msgCommandOrigin ne peut pas être délivré.")
+          msg = Layouts.getMessageSpan(s"$msgCommandOrigin n'a pas pu être délivrée.")
         )
-        // TODO refresh page when command finished
+        
+        // refresh page
+        websocketSvc.sendMessagesToAll(msgSvc.getLatestMessages(20))
     }
 
     s"Votre commande est en cours de préparation: $strRequest"
