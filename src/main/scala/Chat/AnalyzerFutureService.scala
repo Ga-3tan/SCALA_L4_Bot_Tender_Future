@@ -45,7 +45,7 @@ class AnalyzerFutureService(productSvc: ProductService,
     val strRequest = reply(null)(t)
     val msgCommandOrigin: String = s"@$user la commande de $strRequest"
     val validOrders = Future.sequence(orders).map(_.collect{ case Success(v) => v})
-    validOrders onComplete {
+    validOrders transform {
       case Success(l) =>
         val validTree = getTree(l)
         var msgContent = ""
@@ -63,17 +63,17 @@ class AnalyzerFutureService(productSvc: ProductService,
           sender = "Bot-tender",
           msg = Layouts.getMessageSpan(s"$msgContent")
         )
-        
+
         // refresh page
-        websocketSvc.sendMessagesToAll(msgSvc.getLatestMessages(20))
+        Success(websocketSvc.sendMessagesToAll(msgSvc.getLatestMessages(20)))
       case Failure(_) =>
         msgSvc.add(
           sender = "Bot-tender",
           msg = Layouts.getMessageSpan(s"$msgCommandOrigin n'a pas pu être délivrée.")
         )
-        
+
         // refresh page
-        websocketSvc.sendMessagesToAll(msgSvc.getLatestMessages(20))
+        Success(websocketSvc.sendMessagesToAll(msgSvc.getLatestMessages(20)))
     }
 
     s"Votre commande est en cours de préparation: $strRequest"
